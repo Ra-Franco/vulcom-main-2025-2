@@ -4,6 +4,7 @@ dotenv.config(); // Carrega as variáveis de ambiente do arquivo .env
 import express, { json, urlencoded } from "express";
 import cookieParser from "cookie-parser";
 import logger from "morgan";
+import { rateLimit } from "express-rate-limit";
 
 const app = express();
 
@@ -20,6 +21,13 @@ app.use(logger("dev"));
 app.use(json());
 app.use(urlencoded({ extended: false }));
 app.use(cookieParser());
+
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // Intervalo: 1 minuto
+  limit: 20, // Máximo de 20 requisições
+});
+
+app.use(limiter);
 
 /*********** ROTAS DA API **************/
 
