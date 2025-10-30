@@ -182,4 +182,11 @@ controller.me = function (req, res) {
   res.send(req?.authUser);
 };
 
+controller.logout = function (req, res) {
+  // Apaga no front-end o cookie que armazena o token
+  res.clearCookie(process.env.AUTH_COOKIE_NAME);
+  // HTTP 204: No Content
+  res.status(204).end();
+};
+
 export default controller;
