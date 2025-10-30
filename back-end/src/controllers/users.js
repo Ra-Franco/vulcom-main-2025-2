@@ -116,15 +116,12 @@ controller.login = async function (req, res) {
 
     // Se o usuário não for encontrado, retorna
     // HTTP 401: Unauthorized
-    if (!user) return res.status(401).end();
+    if (!user) {
+      console.error("ERRO DE LOGIN: usuário não encontrado");
+      return res.status(401).end();
+    }
 
-    // REMOVENDO VULNERABILIDADE DE AUTENTICAÇÃO FIXA
-    // if(req.body?.username === 'admin' && req.body?.password === 'admin123') passwordIsValid = true
-    // else passwordIsValid = user.password === req.body?.password
-    // passwordIsValid = user.password === req.body?.password
-
-    // Chamando bcrypt.compare() para verificar se o hash da senha
-    // enviada coincide com o hash da senha armazenada no BD
+    // Usuário encontrado, vamos conferir a senha
     const passwordIsValid = await bcrypt.compare(
       req.body?.password,
       user.password
@@ -132,11 +129,16 @@ controller.login = async function (req, res) {
 
     // Se a senha estiver errada, retorna
     // HTTP 401: Unauthorized
-    if (!passwordIsValid) return res.status(401).end();
+    if (!passwordIsValid) {
+      console.error("ERRO DE LOGIN: senha inválida");
+      return res.status(401).end();
+    }
 
+    // Deleta o campo "password" do objeto "user" antes de usá-lo
+    // no token e no valor de retorno
     if (user.password) delete user.password;
 
-    // Usuário e senha OK, passamos ao procedimento de gerar o token
+    // Usuário/email e senha OK, passamos ao procedimento de gerar o token
     const token = jwt.sign(
       user, // Dados do usuário
       process.env.TOKEN_SECRET, // Senha para criptografar o token
@@ -145,20 +147,31 @@ controller.login = async function (req, res) {
 
     // Formamos o cookie para enviar ao front-end
     res.cookie(process.env.AUTH_COOKIE_NAME, token, {
-      httpOnly: true, // O cookie ficará inacessível para o JS no front-end
+      httpOnly: true, // Torna o cookie inacessível para JavaScript
+      secure: true, // O cookie só trafegará em HTTPS ou localhost
+      sameSite: "None",
+      path: "/",
+      maxAge: 24 * 60 * 60 * 1000, // 24h
+    });
+
+    // Cookie não HTTP-only, acessível via JS no front-end
+    res.cookie("not-http-only", "Este-cookie-NAO-eh-HTTP-Only", {
+      httpOnly: false,
       secure: true, // O cookie será criptografado em conexões https
       sameSite: "None",
       path: "/",
       maxAge: 24 * 60 * 60 * 100, // 24h
     });
 
-    // Retorna o token e o usuário autenticado com
+    // Retorna o token e o usuário autenticado, com o status
     // HTTP 200: OK (implícito)
-    res.send({ token, user });
+    res.send({ user, token });
   } catch (error) {
-    console.error(error);
-
+    // Se algo de errado acontecer, cairemos aqui
+    // Nesse caso, vamos exibir o erro no console e enviar
+    // o código HTTP correspondente a erro do servidor
     // HTTP 500: Internal Server Error
+    console.error(error);
     res.status(500).end();
   }
 };
