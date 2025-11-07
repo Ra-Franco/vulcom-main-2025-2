@@ -1,9 +1,35 @@
 import prisma from '../database/client.js'
+import Car from '../models/Car.js'
+import { ZodError } from 'zod'
 
 const controller = {}     // Objeto vazio
 
 controller.create = async function(req, res) {
   try {
+
+    // Sempre que houver um campo que represente uma data,
+    // precisamos garantir sua conversão para o tipo Date
+    // antes de passá-lo ao Zod para validação
+    if(req.body.selling_date) req.body.selling_date = new Date(req.body.selling_date)
+
+    // Converte selling_price para número se presente
+    if(req.body.selling_price !== null && req.body.selling_price !== undefined && req.body.selling_price !== '') {
+      req.body.selling_price = Number(req.body.selling_price)
+    } else {
+      req.body.selling_price = null
+    }
+
+    // Converte year_manufacture para número
+    if(req.body.year_manufacture) req.body.year_manufacture = Number(req.body.year_manufacture)
+
+    // Converte imported para boolean
+    if(typeof req.body.imported === 'string') {
+      req.body.imported = req.body.imported === 'true' || req.body.imported === true
+    }
+
+    // Invoca a validação do modelo do Zod para os dados que
+    // vieram em req.body
+    Car.parse(req.body)
 
     // Preenche qual usuário criou o carro com o id do usuário autenticado
     req.body.created_user_id = req.authUser.id
@@ -20,8 +46,12 @@ controller.create = async function(req, res) {
   catch(error) {
     console.error(error)
 
-    // HTTP 500: Internal Server Error
-    res.status(500).end()
+    // Se for erro de validação do Zod, retorna
+    // HTTP 422: Unprocessable Entity
+    if(error instanceof ZodError) res.status(422).send(error.issues)
+
+    // Senão, retorna o habitual HTTP 500: Internal Server Error
+    else res.status(500).end()
   }
 }
 
@@ -84,6 +114,30 @@ controller.retrieveOne = async function(req, res) {
 controller.update = async function(req, res) {
   try {
 
+    // Sempre que houver um campo que represente uma data,
+    // precisamos garantir sua conversão para o tipo Date
+    // antes de passá-lo ao Zod para validação
+    if(req.body.selling_date) req.body.selling_date = new Date(req.body.selling_date)
+
+    // Converte selling_price para número se presente
+    if(req.body.selling_price !== null && req.body.selling_price !== undefined && req.body.selling_price !== '') {
+      req.body.selling_price = Number(req.body.selling_price)
+    } else {
+      req.body.selling_price = null
+    }
+
+    // Converte year_manufacture para número
+    if(req.body.year_manufacture) req.body.year_manufacture = Number(req.body.year_manufacture)
+
+    // Converte imported para boolean
+    if(typeof req.body.imported === 'string') {
+      req.body.imported = req.body.imported === 'true' || req.body.imported === true
+    }
+
+    // Invoca a validação do modelo do Zod para os dados que
+    // vieram em req.body
+    Car.parse(req.body)
+
     const result = await prisma.car.update({
       where: { id: Number(req.params.id) },
       data: req.body
@@ -97,8 +151,14 @@ controller.update = async function(req, res) {
   catch(error) {
     console.error(error)
 
-    // HTTP 500: Internal Server Error
-    res.status(500).end()
+    // Não encontrou e não atualizou ~> HTTP 404: Not Found
+    if(error?.code === 'P2025') res.status(404).end()
+
+    // Erro do Zod ~> HTTP 422: Unprocessable Entity
+    else if(error instanceof ZodError) res.status(422).send(error.issues)
+
+    // Outros erros ~> HTTP 500: Internal Server Error
+    else res.status(500).end()
   }
 }
 

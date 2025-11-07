@@ -56,14 +56,30 @@ function getErrorDescription(response) {
   }
 }
 
-function processResponse(response) {
+async function processResponse(response) {
   if (response.ok) {
     const isJson = response.headers
       .get("content-type")
       ?.includes("application/json");
     if (isJson) return response.json();
     else return true;
-  } else throw new HttpError(response.status, getErrorDescription(response));
+  } else {
+    const error = new HttpError(response.status, getErrorDescription(response));
+    // Para erros 422 (validação), inclui o body da resposta com as issues do Zod
+    if (response.status === 422) {
+      try {
+        const isJson = response.headers
+          .get("content-type")
+          ?.includes("application/json");
+        if (isJson) {
+          error.body = await response.json();
+        }
+      } catch (e) {
+        // Ignora erros ao ler o body
+      }
+    }
+    throw error;
+  }
 }
 
 myfetch.post = async function (path, body) {
