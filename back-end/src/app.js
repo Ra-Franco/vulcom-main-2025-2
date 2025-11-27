@@ -26,7 +26,12 @@ const limiter = rateLimit({
   windowMs: 60 * 1000, // Intervalo: 1 minuto
   limit: 20, // Máximo de 20 requisições
 });
-
+/**
+ * API4:2023 - Consumo irrestrito de recursos
+ * Está vulnerabilidade foi evitada no código realizando uma verificação da quantidade de requisições por minuto, com o limite de 20.
+ * Utilizamos a bibliotece express-rate-limiter. Também podemos fazer a verificação por IP que esté enviando as requisições.
+ *
+ */
 app.use(limiter);
 
 /*********** ROTAS DA API **************/
@@ -40,6 +45,13 @@ app.use("/customers", customersRouter);
 import usersRouter from "./routes/users.js";
 app.use("/users", usersRouter);
 
+/**
+  API2:2023 - Falha na autenticação
+  Este middleware intercepta todas as rotas e verifica
+  se um token de autorização foi enviado junto com a
+  requisição. Impedindo que alguem não logado ou permitido acesse partes API que não podia. Também tem o cokkie como not-http, fazendo com que fique salvo no backend.
+  Não sendo possível acessar pelo client.
+*/
 import auth from "./middleware/auth.js";
 app.use(auth);
 

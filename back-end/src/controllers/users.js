@@ -4,6 +4,11 @@ import bcrypt from "bcrypt";
 
 const controller = {}; // Objeto vazio
 
+/**
+ *
+ * API5:2023 - Falha de autenticação a nível de função.
+ * Essa falha foi corrigida nesse  controller validando sempre se o usuário é admin para poder acessar. E caso não seja retorna um HTTP 403.
+ */
 controller.create = async function (req, res) {
   try {
     // Somente usuários administradores podem acessar este recurso
@@ -30,7 +35,11 @@ controller.create = async function (req, res) {
     res.status(500).end();
   }
 };
-
+/**
+ * API3:2023- Falha de autenticação a nivel de propriedade.
+ * Aqui evita a falha de expor a senha, mesmo que após criptografia, para o frontend, não sendo um dado relevante para qualquer usuário. Até o seu dono.
+ *
+ */
 controller.retrieveAll = async function (req, res) {
   try {
     // Somente usuários administradores podem acessar este recurso
